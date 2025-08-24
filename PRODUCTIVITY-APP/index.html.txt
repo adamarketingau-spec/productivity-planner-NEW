@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Productivity Planner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Productivity Planner</h1>
+
+    <div class="task-input">
+      <input type="text" id="main-task" placeholder="Enter main task">
+      <select id="priority">
+        <option value="">Select Priority</option>
+        <option value="timed">⏱ Timed</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <input type="number" id="timer-input" placeholder="Minutes" style="display:none;">
+      <button onclick="addTask()">Add Task</button>
+    </div>
+
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">←</button>
+      <span id="current-date"></span>
+      <button onclick="changeDate(1)">→</button>
+    </div>
+
+    <div id="task-list"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
