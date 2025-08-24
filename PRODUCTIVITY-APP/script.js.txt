@@ -1,0 +1,176 @@
+let currentDate = new Date();
+const taskData = {};
+
+function formatDate(date) {
+  return date.toISOString().split("T")[0];
+}
+
+function updateDateDisplay() {
+  document.getElementById("current-date").textContent = formatDate(currentDate);
+  renderTasks();
+}
+
+function changeDate(offset) {
+  currentDate.setDate(currentDate.getDate() + offset);
+  updateDateDisplay();
+}
+
+document.getElementById("priority").addEventListener("change", function () {
+  const timerInput = document.getElementById("timer-input");
+  timerInput.style.display = this.value === "timed" ? "block" : "none";
+});
+
+function addTask() {
+  const taskName = document.getElementById("main-task").value;
+  const priority = document.getElementById("priority").value;
+  const minutes = document.getElementById("timer-input").value;
+
+  if (!taskName || !priority) return;
+
+  const task = {
+    name: taskName,
+    priority,
+    subtasks: [],
+    progress: 0,
+    timer: priority === "timed" ? minutes * 60 : null,
+  };
+
+  const dateKey = formatDate(currentDate);
+  if (!taskData[dateKey]) taskData[dateKey] = [];
+  taskData[dateKey].push(task);
+
+  document.getElementById("main-task").value = "";
+  document.getElementById("priority").value = "";
+  document.getElementById("timer-input").value = "";
+  document.getElementById("timer-input").style.display = "none";
+
+  renderTasks();
+}
+
+function renderTasks() {
+  const dateKey = formatDate(currentDate);
+  const taskList = document.getElementById("task-list");
+  taskList.innerHTML = "";
+
+  if (!taskData[dateKey]) return;
+
+  // Sort tasks by priority (timed > high > medium > low)
+  const priorityOrder = { timed: 1, high: 2, medium: 3, low: 4 };
+  taskData[dateKey].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  taskData[dateKey].forEach((task, taskIndex) => {
+    const taskDiv = document.createElement("div");
+    taskDiv.className = `task ${task.priority}`;
+
+    let timerDisplay = "";
+    if (task.priority === "timed" && task.timer !== null) {
+      timerDisplay = `<span id="timer-${taskIndex}">${formatTime(task.timer)}</span>`;
+      startCountdown(taskIndex, dateKey);
+    }
+
+    taskDiv.innerHTML = `
+      <strong>${task.name}</strong> (${task.priority.toUpperCase()}) ${timerDisplay}
+      <button onclick="deleteTask(${taskIndex})">Delete</button>
+      <button onclick="tickTask(${taskIndex})">✔</button>
+
+      <div class="progress-container">
+        <div class="progress-bar" id="progress-${taskIndex}"></div>
+        <div class="progress-text" id="progress-text-${taskIndex}">0%</div>
+      </div>
+
+      <div class="subtasks" id="subtasks-${taskIndex}"></div>
+      <div class="subtask-input">
+        <input type="text" id="subtask-input-${taskIndex}" placeholder="Add subtask">
+        <button onclick="addSubtask(${taskIndex})">+</button>
+      </div>
+    `;
+
+    taskList.appendChild(taskDiv);
+
+    updateProgress(taskIndex, dateKey);
+  });
+}
+
+function addSubtask(taskIndex) {
+  const dateKey = formatDate(currentDate);
+  const input = document.getElementById(`subtask-input-${taskIndex}`);
+  const subtaskName = input.value;
+  if (!subtaskName) return;
+
+  taskData[dateKey][taskIndex].subtasks.push({ name: subtaskName, done: false });
+  input.value = "";
+  renderTasks();
+}
+
+function deleteTask(taskIndex) {
+  const dateKey = formatDate(currentDate);
+  taskData[dateKey].splice(taskIndex, 1);
+  renderTasks();
+}
+
+function tickTask(taskIndex) {
+  deleteTask(taskIndex);
+}
+
+function deleteSubtask(taskIndex, subIndex) {
+  const dateKey = formatDate(currentDate);
+  taskData[dateKey][taskIndex].subtasks.splice(subIndex, 1);
+  renderTasks();
+}
+
+function tickSubtask(taskIndex, subIndex) {
+  const dateKey = formatDate(currentDate);
+  taskData[dateKey][taskIndex].subtasks[subIndex].done = true;
+  updateProgress(taskIndex, dateKey);
+  renderTasks();
+}
+
+function updateProgress(taskIndex, dateKey) {
+  const task = taskData[dateKey][taskIndex];
+  const total = task.subtasks.length;
+  const done = task.subtasks.filter(s => s.done).length;
+  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+  task.progress = percent;
+
+  document.getElementById(`progress-${taskIndex}`).style.width = `${percent}%`;
+  document.getElementById(`progress-text-${taskIndex}`).textContent = `${percent}%`;
+
+  const subtasksDiv = document.getElementById(`subtasks-${taskIndex}`);
+  subtasksDiv.innerHTML = "";
+  task.subtasks.forEach((sub, subIndex) => {
+    const subDiv = document.createElement("div");
+    subDiv.innerHTML = `
+      ${sub.done ? "<s>" + sub.name + "</s>" : sub.name}
+      <button onclick="tickSubtask(${taskIndex}, ${subIndex})">✔</button>
+      <button onclick="deleteSubtask(${taskIndex}, ${subIndex})">Delete</button>
+    `;
+    subtasksDiv.appendChild(subDiv);
+  });
+}
+
+function startCountdown(taskIndex, dateKey) {
+  const timerId = setInterval(() => {
+    const task = taskData[dateKey][taskIndex];
+    if (!task || task.timer === null) {
+      clearInterval(timerId);
+      return;
+    }
+
+    if (task.timer > 0) {
+      task.timer--;
+      document.getElementById(`timer-${taskIndex}`).textContent = formatTime(task.timer);
+    } else {
+      clearInterval(timerId);
+      document.getElementById(`timer-${taskIndex}`).textContent = "Time's up!";
+    }
+  }, 1000);
+}
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s < 10 ? "0" : ""}${s}`;
+}
+
+updateDateDisplay();
